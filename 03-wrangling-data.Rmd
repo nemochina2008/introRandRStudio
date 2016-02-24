@@ -1,0 +1,480 @@
+---
+title: "Useful R packages for Data Wrangling"
+output: html_document
+---
+
+
+In the real world, analyzing data rarely involves data that can be 
+easily imported ready for analysis. According to Wikipedia:
+
+> Data munging or data wrangling is loosely the process of manually converting or mapping data from one "raw" form into another format that allows for more convenient consumption of the data with the help of semi-automated tools.
+
+R provides incredibly powerful and flexible language for data 
+manipulation. However, the syntax is somewhat hard to get used 
+to. We will therefore  introducing a package that makes the 
+syntax much more like the English language. This package is 
+`dplyr` which you should install if you have not done so already.
+
+
+### What is dplyr?
+
+[`dplyr`](http://cran.rstudio.com/web/packages/dplyr/vignettes/introduction.html) 
+is a powerful R-package to transform and summarize 
+tabular data with rows and columns. 
+
+### Why is it useful?
+
+The package contains a set of functions 
+(or "verbs") to perform common data manipulation
+operations such as filtering for rows, selecting 
+specific columns, re-ordering rows, adding new 
+columns and summarizing data. 
+
+In addition, `dplyr` contains a useful function to perform another common task 
+which is the is the "split-apply-combine" concept.  We will discuss that in a
+little bit. 
+
+### How does it compare to using base functions R?
+
+If you are familiar with R, you are probably familiar with base R functions
+such as `split()`, `subset()`, `apply()`, `sapply()`, `lapply()`, `tapply()` and 
+`aggregate()`. Compared to base functions in R, the functions in `dplyr` are easier 
+to work with, are more consistent in the syntax and are targeted for 
+data analysis around data frames instead of just vectors. 
+
+### How do I get dplyr? 
+
+To install dplyr
+
+```{r, eval=FALSE}
+install.packages("dplyr")
+```
+
+To load dplyr
+
+```{r, message=FALSE}
+library(dplyr)
+```
+
+When using `dplyr` we recommend reading in data with the 
+functions in the `readr` R package:
+
+To install `readr`
+
+```{r, eval=FALSE}
+install.packages("readr")
+```
+
+To load our `msleep_ggplot2.csv` data set: 
+```{r}
+library(readr)
+msleep <- read_csv("https://raw.githubusercontent.com/genomicsclass/dagdata/master/inst/extdata/msleep_ggplot2.csv")
+```
+
+This object is now a special type of `data.frame` called `tbl_df` 
+that has a nicer printing method. We can now simply evaluate 
+an expression with just the object and see a meaningful 
+summary instead of everything.
+
+```{r}
+str(msleep)
+msleep
+```
+
+The columns (in order) correspond to the following: 
+
+column name | Description
+--- | ---
+`name` | common name
+`genus` | taxonomic rank
+`vore` | carnivore, omnivore or herbivore?
+`order` | taxonomic rank
+`conservation` | the conservation status of the mammal
+`sleep_total` | total amount of sleep, in hours
+`sleep_rem` | rem sleep, in hours
+`sleep_cycle` | length of sleep cycle, in hours
+`awake` | amount of time spent awake, in hours
+`brainwt` | brain weight in kilograms
+`bodywt` | body weight in kilograms
+
+
+# Important `dplyr` verbs to remember
+
+`dplyr` verbs | Description
+--- | ---
+`select()` | select columns 
+`filter()` | filter rows
+`arrange()` | re-order or arrange rows
+`mutate()` | create new columns
+`summarise()` | summarise values
+`group_by()` | allows for group operations in the "split-apply-combine" concept
+
+
+# `dplyr` verbs in action
+
+The two most basic functions are `select()` and `filter()` which selects 
+columns and filters rows, respectively. 
+
+### Selecting columns using `select()`
+
+Select a set of columns: the name and the sleep\_total columns. 
+
+```{r}
+sleepData <- select(msleep, name, sleep_total)
+sleepData
+```
+
+In base R, this is equivalent to 
+```{r}
+msleep[, c("name", "sleep_total")]
+```
+
+`dplyr` is much more powerful though. 
+To select all the columns *except* a 
+specific column, use the "-" (subtraction) operator 
+(also known as negative indexing)
+
+```{r}
+select(msleep, -name)
+```
+
+To select a range of columns by name, 
+use the ":" (colon) operator
+
+```{r}
+select(msleep, name:order)
+```
+
+To select all columns that start with the 
+character string "sl", use the function `starts_with()`
+
+```{r}
+select(msleep, starts_with("sl"))
+```
+
+Some additional options to select columns based on a specific criteria include
+
+1. `ends_with()` = Select columns that end with a character string
+2. `contains()` = Select columns that contain a character string
+3. `matches()` = Select columns that match a regular expression
+4. `one_of()` = Select columns names that are from a group of names
+
+
+#### Problem 1
+
+Select all columns except those from `genus` to `conservation`. 
+
+```{r}
+## Provide your code here
+
+```
+
+
+#### Problem 2
+
+Select all columns that end with the characters "wt". 
+
+```{r}
+## Provide your code here
+
+```
+
+You can also rename variables with `select()` 
+by using named arguments: 
+```{r}
+select(msleep, brain_wt = brainwt)
+```
+
+That's not very useful as `select()` drops 
+all other variables not mentioned. 
+So, we can use the `rename()` function. 
+```{r}
+rename(msleep, brain_wt = brainwt)
+
+## If you want to permanently change, 
+## msleep <- rename(msleep, brain_wt = brainwt)
+```
+
+
+### Selecting rows using `filter()`
+
+Filter the rows for mammals that sleep a 
+total of more than 10 hours. 
+
+```{r}
+filter(msleep, sleep_total >= 10)
+```
+
+Filter the rows for mammals that sleep a 
+total of more than 10 hours *and* have
+a body weight of greater than 1 kilogram.
+
+```{r}
+filter(msleep, sleep_total >= 10, bodywt >= 1)
+```
+
+In base R, this is equivalent to 
+```{r}
+msleep[msleep$sleep_total >= 10 & msleep$bodywt >= 1, ]
+```
+
+Filter the rows for mammals in the Perissodactyla 
+and Primates taxonomic order
+```{r}
+filter(msleep, order %in% c("Perissodactyla", "Primates"))
+```
+
+You can use the boolean operators 
+(e.g. >, <, >=, <=, !=, %in%) to create the 
+logical tests. 
+
+
+#### Problem 3
+
+Filter for rows for mammals with a `brainwt` 
+greater than 1 and a `bodywt` less than 100. 
+
+```{r}
+## Provide your code here
+
+```
+
+
+You can also select rows by position using the 
+`slice()` function. Here we extract rows 20 to 25. 
+
+```{r}
+slice(msleep, 20:25)
+```
+
+To extract distinct rows, you can use the 
+function `distinct()`: 
+```{r}
+distinct(select(msleep, order))
+```
+
+
+# Pipe operator: %>%
+
+Before we go any futher, let's introduce the 
+pipe operator: `%>%`. dplyr imports
+this operator from another package (`magrittr` [see help file here](http://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html)). 
+This operator allows you to pipe the output 
+from one function to the input of another
+function. Instead of nesting functions 
+(reading from the inside to the 
+outside), the idea of of piping is to 
+read the functions from left to right. 
+
+Here's an example you have seen: 
+```{r}
+select(msleep, name, sleep_total)
+```
+
+Now in this case, we will pipe the `msleep` data frame to the function that will 
+select two columns (`name` and `sleep_total`). 
+```{r}
+msleep %>% 
+    select(name, sleep_total)
+```
+
+**Note** that we did not provide the `msleep` data 
+frame inside the function `select()`.  Rather, we 
+piped the data frame as input into the `select()` function. 
+
+
+#### Problem 4
+
+Using the pipe operator (`%>%`), filter for rows for 
+mammals in the `order` of Primates and Carnivora.  
+
+```{r}
+## Provide your code here
+
+```
+
+
+You will soon see how useful the pipe operator is 
+when we start to combine many functions.
+
+
+# Back to dplyr verbs in action
+
+Now that you know about the pipe operator (`%>%`), 
+we will use it throughout the rest of this tutorial. 
+
+### Arrange or re-order rows using `arrange()`
+
+To arrange (or re-order) rows by a particular 
+column such as the taxonomic order, list the name of 
+the column you want to arrange the rows by
+
+```{r}
+msleep %>% 
+    arrange(order)
+```
+
+Now, we will select three columns from `msleep`, 
+arrange the rows by the taxonomic order and then 
+arrange the rows by `sleep_total`. 
+```{r}
+msleep %>% 
+    select(name, order, sleep_total) %>%
+    arrange(order, sleep_total)
+```
+
+Same as above, except here we filter the rows 
+for mammals that sleep for 16 or more hours instead 
+of showing the head of the final data frame
+
+```{r}
+msleep %>% 
+    select(name, order, sleep_total) %>%
+    arrange(order, sleep_total) %>% 
+    filter(sleep_total >= 16)
+```
+
+#### Problem 5
+
+Let's try something slightly more complicated: 
+same as above, except arrange the rows 
+in the `sleep_total` column in a descending 
+order. (hint: look at the `?arrange` 
+help file for the `desc()` option). 
+ 
+
+```{r}
+## Provide your code here
+
+```
+
+#### Problem 6
+
+Select all columns names with the characters 
+"sleep" and arrange the rows for the `sleep_rem` 
+in a decreasing order. 
+
+```{r}
+## Provide your code here
+
+```
+
+
+
+### Create new columns using `mutate()`
+
+The `mutate()` function will add new columns 
+to the data frame. Create a new column called 
+`rem_proportion` which is the ratio of rem 
+sleep to total amount of sleep. 
+
+```{r}
+msleep %>% 
+    mutate(rem_proportion = sleep_rem / sleep_total) %>%
+    head
+```
+
+#### Problem 7
+
+You can create many new columns using mutate 
+(separated by commas). Create the `rem_proportion` 
+column as above, but now add a second column called 
+`bodywt_grams` which is the bodywt column in grams. 
+
+```{r}
+## Provide your code here
+
+```
+
+
+### Create summaries of the data frame using `summarise()`
+
+The `summarise()` function will create summary
+statistics for a given column in the data frame 
+such as finding the mean. For example, to 
+compute the average number of hours of sleep, 
+apply the `mean()` function to the column 
+`sleep_total` and call the summary value `avg_sleep`. 
+
+```{r}
+msleep %>% 
+    summarise(avg_sleep = mean(sleep_total))
+```
+
+There are many other summary statistics you 
+could consider such `sd()`, `min()`, `max()`, 
+`median()`, `sum()`, `n()` (returns the length of vector), 
+`first()` (returns first value in vector), 
+`last()` (returns last value in vector) and 
+`n_distinct()` (number of distinct values in vector). 
+
+
+#### Problem 8
+
+Summarize `sleep_total` column in the `msleep` data set with the 
+average sleep, the minimum and maximum amount of sleep, and the 
+total number of mammals. 
+
+```{r}
+## Provide your code here
+
+```
+
+    
+### Group operations using `group_by()`
+
+The `group_by()` verb is an important function 
+in `dplyr`. As we mentioned before it's related to 
+concept of "split-apply-combine". We literally 
+want to split the data frame by some variable 
+(e.g. `vore`), apply a function to the individual 
+data frames and then combine the output. 
+
+Say we wanted to calculate the standard 
+deviation of the body and brain weights for each 
+of factor in the `vore` column.  First, we can 
+look at the types of factors in the `vore` column
+```{r}
+table(msleep$vore)
+```
+
+Then, we could use `filter()` to filter for 
+rows that contain "carni" in the `vore` column and 
+summarize with the standard deviations of the 
+brain and bodyweights. 
+```{r}
+msleep %>% 
+    filter(vore == "carni") %>% 
+    summarize("bodywt_sd" = sd(bodywt), 
+              "brainwt_sd" = sd(brainwt, na.rm = TRUE))
+```
+
+We could repeat this for each factor in `vore`,
+which is a bit teadious. Instead, we could use 
+this using the `group_by()` function. 
+
+Let's do that: split the `msleep` data frame 
+by the `vore` column, then calculate the standard 
+deviation of body weight and brain weight for each 
+invididual data frame. (hint: We expect a set of 
+summary statistics for each level in `vore`.)
+
+```{r}
+msleep %>% 
+    group_by(vore) %>%
+    summarize("bodywt_sd" = sd(bodywt), 
+              "brainwt_sd" = sd(brainwt, na.rm = TRUE))
+```
+
+
+#### Problem 9 
+
+Split the `msleep` data frame by the taxonomic order, 
+then ask for the same summary statistics as above 
+in Problem 8. 
+
+```{r}
+## Provide your code here
+
+```
+
